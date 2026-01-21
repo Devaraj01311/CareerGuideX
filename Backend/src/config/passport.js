@@ -8,16 +8,14 @@ passport.use(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: `${process.env.BACKEND_URL}/user/google/callback`,
-      scope: ["profile", "email"], // make sure emails are available
+      callbackURL: `${process.env.BACKEND_URL}/api/user/google/callback`,
+      scope: ["profile", "email"], 
     },
     async (_, __, profile, done) => {
       try {
-        // Make sure email exists
         let email = profile.emails && profile.emails[0] ? profile.emails[0].value : null;
         if (!email) return done(new Error("Google email not available"), null);
 
-        // Check if user already exists
         let user = await User.findOne({ email });
 
         if (!user) {
@@ -45,8 +43,8 @@ passport.use(
     {
       clientID: process.env.GITHUB_CLIENT_ID,
       clientSecret: process.env.GITHUB_CLIENT_SECRET,
-      callbackURL: `${process.env.BACKEND_URL}/user/github/callback`,
-      scope: ["user:email"], // make sure emails are available
+      callbackURL: `${process.env.BACKEND_URL}/api/user/github/callback`,
+      scope: ["user:email"], 
     },
     async (_, __, profile, done) => {
       try {
