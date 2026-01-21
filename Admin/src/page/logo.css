@@ -1,0 +1,25 @@
+body {
+  background-color: #2b2523; /* Dark background from your image */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+}
+
+.logo-container {
+  width: 200px; /* Adjust size here */
+}
+
+.logo-path {
+  fill: #e3c25d; /* The Gold color */
+  stroke: #e3c25d;
+  stroke-width: 0.5;
+  stroke-linejoin: round;
+}
+
+/* Optional: Add a hover effect for UI interactivity */
+.logo-container:hover .logo-path {
+  fill: #fffad6;
+  transition: fill 0.3s ease;
+}
