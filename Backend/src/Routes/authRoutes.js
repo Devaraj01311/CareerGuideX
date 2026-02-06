@@ -4,7 +4,7 @@ const passport = require('passport');
 const { uploadProfile, uploadResumes } = require("../middleware/cloudinarymiddleware");
 
 const { register, login, updateProfile, getProfile, verifyEmail, resendOtp,oauthCallback, uploadResume, deleteResume, getResume,
-  sendMessageToAdmin, getMyMessages, markMessageRead, getBasicUser, forgotPassword, resetPassword
+  sendMessageToAdmin, getMyMessages, markMessageRead, getBasicUser, forgotPassword, resetPassword, guestLogin
  } = require('../controllers/authController');
 const auth = require('../middleware/auth');
 
@@ -13,6 +13,7 @@ const router = express.Router();
 // Routes
 router.post('/register', register);
 router.post('/login', login);
+router.post("/guest-login", guestLogin);
 
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password/:token", resetPassword);

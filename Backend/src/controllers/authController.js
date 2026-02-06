@@ -31,16 +31,12 @@ exports.register = async (req, res) => {
       email,
       password: hashedPassword,
       verificationCode: code,
-      verificationExpires: Date.now() + 10 * 60 * 1000 // 10 mins
+      verificationExpires: Date.now() + 10 * 60 * 1000 
     });
 
     await user.save();
+    await sendVerificationEmail(email, code);
 
-try {
-  await sendVerificationEmail(email, code);
-} catch (err) {
-  console.error("Verification email failed:", err.message);
-}
     res.status(201).json({
       message: "Registered successfully. Verify your email."
     });
@@ -56,31 +52,31 @@ exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // 1️⃣ Check if user exists
+    //  Check if user exists
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(400).json({ message: "Invalid email or password" });
     }
 
-    // 2️⃣ Compare password
+    //  Compare password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid email or password" });
     }
 
-    // 3️⃣ Check if email is verified
+    //  Check if email is verified
     if (!user.isVerified) {
       return res.status(403).json({ message: "Please verify your email before login" });
     }
 
-    // 4️⃣ Generate JWT token
+    //  Generate JWT token
     const token = jwt.sign(
       { id: user._id },
       process.env.JWT_SECRET,
       { expiresIn: "1d" }
     );
 
-    // 5️⃣ Send response
+    // Send response
     return res.json({
       message: "Login successful",
       token,
@@ -100,7 +96,6 @@ exports.login = async (req, res) => {
 
 // =================== LOGOUT ===================
 exports.logout = async (req, res) => {
-  // For JWT, logout is handled client-side by deleting the token
   res.json({ message: "Logout successful. Please remove token from client." });
 };
 
@@ -119,7 +114,7 @@ exports.getProfile = async (req, res) => {
 // =================== UPDATE PROFILE ===================
 exports.updateProfile = async (req, res) => {
   try {
-    const userId = req.user; // from auth middleware
+    const userId = req.user;
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
@@ -534,5 +529,47 @@ exports.resetPassword = async (req, res) => {
   }
 };
 
-    
+    // GUEST LOGIN 
+exports.guestLogin = async (req, res) => {
+  try {
+    const guestEmail = "guest@careerguide.com";
+    let user = await User.findOne({ email: guestEmail });
+
+    if (!user) {
+      const randomPassword = crypto.randomBytes(16).toString("hex");
+      const hashedPassword = await bcrypt.hash(randomPassword, 10);
+
+      user = new User({
+        name: "Guest User",
+        email: guestEmail,
+        password: hashedPassword,
+        isVerified: true, 
+        role: "user",     
+      });
+
+      await user.save();
+    }
+
+    const token = jwt.sign(
+      { id: user._id },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" } 
+    );
+
+    return res.json({
+      message: "Logged in as Guest",
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        image: user.image || null,
+        isGuest: true 
+      },
+    });
+  } catch (error) {
+    console.error("Guest login error:", error);
+    return res.status(500).json({ message: "Guest login failed", error: error.message });
+  }
+};
  

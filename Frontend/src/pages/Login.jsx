@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../server/api"; 
 import { FcGoogle } from "react-icons/fc";
-import { FaGithub } from "react-icons/fa";
+import { FaGithub, FaUserSecret } from "react-icons/fa"; 
 import toast from "react-hot-toast";
 import NavLogReg from "../context/NavLogReg";
 import AbstractBackground from "../Components/AbstractBackground";
@@ -14,10 +14,10 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
-
     try {
       const res = await api.post("/user/login", { email, password });
       localStorage.setItem("token", res.data.token);
@@ -38,6 +38,22 @@ export default function Login() {
     }
   };
 
+  const handleGuestLogin = async () => {
+    setLoading(true);
+    try {
+      const res = await api.post("/user/guest-login");
+      localStorage.setItem("token", res.data.token);
+      localStorage.setItem("userId", res.data.user.id);
+      setUser(res.data.user);
+      toast.success("Logged in as Guest!");
+      navigate("/home");
+    } catch (err) {
+      toast.error("Guest login failed!");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleOAuth = (provider) => {
     window.location.href = `${import.meta.env.VITE_API_URL}/user/${provider}`;
   };
@@ -50,13 +66,12 @@ export default function Login() {
       api.get("/user/profile", {
         headers: { Authorization: `Bearer ${token}` },
       })
-           .then((res) => {
-      setUser(res.data);
-      localStorage.setItem("userId", res.data._id); 
-    })
-        
-        .catch((err) => console.error(err))
-        .finally(() => navigate("/home"));
+      .then((res) => {
+        setUser(res.data);
+        localStorage.setItem("userId", res.data._id); 
+      })
+      .catch((err) => console.error(err))
+      .finally(() => navigate("/home"));
       toast.success("Logged in successfully via OAuth!");
       window.history.replaceState({}, document.title, "/login");
     }
@@ -75,7 +90,7 @@ export default function Login() {
 
           <div className="gap-3 mb-6">
             <button
-              className="w-full flex items-center justify-center gap-3 py-2 rounded bg-linear-to-r from-[#1A0B3B] to-indigo-900  hover:bg-blue-400 transition font-sans text-white mb-3"
+              className="w-full flex items-center justify-center gap-3 py-2 rounded bg-linear-to-r from-[#1A0B3B] to-indigo-900 hover:bg-blue-400 transition font-sans text-white mb-3"
               onClick={() => handleOAuth("google")}
               disabled={loading}
             >
@@ -83,11 +98,19 @@ export default function Login() {
             </button>
 
             <button
-              className="w-full flex items-center justify-center gap-3 py-2 rounded border font-sans bg-white border-gray-300 hover:bg-gray-100 transition text-black"
+              className="w-full flex items-center justify-center gap-3 py-2 rounded border font-sans bg-white border-gray-300 hover:bg-gray-100 transition text-black mb-3"
               onClick={() => handleOAuth("github")}
               disabled={loading}
             >
               <FaGithub size={20} /> Login with GitHub
+            </button>
+
+            <button
+              onClick={handleGuestLogin}
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-3 py-2 rounded border-2 border-dashed border-indigo-300 font-sans bg-indigo-50 hover:bg-indigo-100 transition text-indigo-900 font-medium"
+            >
+               <FaUserSecret size={18} /> {loading ? "Connecting..." : "Try as Guest"}
             </button>
           </div>
 
@@ -124,14 +147,14 @@ export default function Login() {
               />
             </div>
 
-            <Link to="/forgot-password" className="text-right text-sm text-blue-900 hover:underline cursor-pointer">
+            <Link to="/forgot-password" size="sm" className="block text-right text-sm text-blue-900 hover:underline cursor-pointer">
               Forgot Password?
             </Link>
 
             <button
               type="submit"
               disabled={loading}
-              className={`w-full py-2 rounded-md ${loading ? "bg-gray-200 cursor-not-allowed text-black" : "bg-linear-to-r from-[#1A0B3B] to-indigo-900  hover:bg-blue-600 text-white"}`}
+              className={`w-full py-2 rounded-md ${loading ? "bg-gray-200 cursor-not-allowed text-black" : "bg-linear-to-r from-[#1A0B3B] to-indigo-900 hover:bg-blue-600 text-white"}`}
             >
               {loading ? "Logging in..." : "Log in"}
             </button>
