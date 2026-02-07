@@ -7,41 +7,53 @@ const jwt = require("jsonwebtoken");
 const Message = require("../models/Message");
 const { getIO } = require("../socket/socket");
 const nodemailer = require("nodemailer")
+const sendMail = require("../utils/sendEmail"); 
 
 
 
 const generateCode = require("../utils/generateVerificationCode");
 const sendVerificationEmail = require("../utils/sendVerificationEmail");
-const { error } = require("console");
+
 
 
 exports.register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
+    // Check if user exists
     if (await User.findOne({ email })) {
       return res.status(400).json({ message: "User already exists" });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const code = generateCode();
+    const code = Math.floor(100000 + Math.random() * 900000).toString(); // 6 digit code
 
     const user = new User({
       name,
       email,
       password: hashedPassword,
       verificationCode: code,
-      verificationExpires: Date.now() + 10 * 60 * 1000 
+      verificationExpires: Date.now() + 10 * 60 * 1000 // 10 mins
     });
 
     await user.save();
-    await sendVerificationEmail(email, code);
 
-    res.status(201).json({
-      message: "Registered successfully. Verify your email."
-    });
+    // Prepare Email
+    const html = `
+      <div style="font-family: Arial; border: 1px solid #eee; padding: 20px;">
+        <h2>Welcome to CareerGuideX</h2>
+        <p>Please use the code below to verify your account:</p>
+        <h1 style="background: #f4f4f4; padding: 10px; text-align: center; letter-spacing: 5px;">${code}</h1>
+        <p>This code expires in 10 minutes.</p>
+      </div>
+    `;
 
+    // Send to the user's provided email
+    await sendMail(email, "Verify your account", html);
+
+    res.status(201).json({ message: "Registered! Check your email for verification code." });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ message: "Registration failed" });
   }
 };
@@ -456,49 +468,26 @@ exports.getBasicUser = async (req, res) => {
 
 exports.forgotPassword = async (req, res) => {
   const { email } = req.body;
-
   try {
     const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
+    if (!user) return res.status(404).json({ error: "User not found" });
 
     const resetToken = crypto.randomBytes(32).toString("hex");
-
-    // Store HASHED token
-    user.resetPasswordToken = crypto
-      .createHash("sha256")
-      .update(resetToken)
-      .digest("hex");
-
-    // FIXED FIELD NAME
-    user.resetPasswordExpire = Date.now() + 10 * 60 * 1000;
-
+    user.resetPasswordToken = crypto.createHash("sha256").update(resetToken).digest("hex");
+    user.resetPasswordExpire = Date.now() + 15 * 60 * 1000;
     await user.save({ validateBeforeSave: false });
 
     const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
 
-    const transporter = nodemailer.createTransport({
-      service: "Gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
+    const html = `<h3>Reset Password</h3><p>Click <a href="${resetUrl}">here</a> to reset your password.</p>`;
 
-    await transporter.sendMail({
-      from: `"CareerGuideX Support" <${process.env.EMAIL_USER}>`,
-      to: user.email,
-      subject: "Password Reset Request",
-      text: `You requested a password reset.\n\nClick here:\n${resetUrl}\n\nThis link will expire in 10 minutes.`,
-    });
+    await sendMail(user.email, "Password Reset Request", html);
 
-    res.json({ message: "Password reset link sent to email" });
+    res.json({ message: "Reset link sent to your email" });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Failed to send reset email" });
   }
 };
-
   
 exports.resetPassword = async (req, res) => {
   try {
